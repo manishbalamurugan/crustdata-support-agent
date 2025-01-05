@@ -1,21 +1,59 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+ 
+@layer base {
+  body {
+    @apply min-h-screen;
+    background: linear-gradient(165deg, 
+      rgb(240, 240, 245) 0%,
+      rgb(245, 245, 250) 50%,
+      rgb(240, 240, 245) 100%
+    );
+    color: rgb(30, 30, 30);
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+.glass {
+  background: linear-gradient(165deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(255, 255, 255, 0.5)
+  );
+  box-shadow: 
+    0 2px 4px -1px rgba(0, 0, 0, 0.05),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
+
+.message-glass {
+  background: linear-gradient(165deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.7)
+  );
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.input-glass {
+  background: linear-gradient(165deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.7)
+  );
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.btn-gradient {
+  background: linear-gradient(165deg,
+    rgb(59, 130, 246),
+    rgb(37, 99, 235)
+  );
+  box-shadow: 0 2px 4px -1px rgba(37, 99, 235, 0.3);
+}
+
+.btn-gradient:hover {
+  background: linear-gradient(165deg,
+    rgb(37, 99, 235),
+    rgb(29, 78, 216)
+  );
+}
+  
