@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { scrapeNotionPages } from '../scraper/notion'
-import { createEmbeddings, findRelevantChunks, type DocumentChunk } from '../embeddings/handler'
+import { createEmbeddings, findRelevantChunks, type DocumentChunk, type ScrapedDocument as EmbeddingsDocument } from '../embeddings/handler'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,7 +15,7 @@ async function initializeDocuments() {
   if (initializationPromise) return initializationPromise
   
   initializationPromise = (async () => {
-    const documents = await scrapeNotionPages()
+    const documents = await scrapeNotionPages() as unknown as EmbeddingsDocument[]
     console.log('Scraped docs:', documents)
     
     documentChunks = await createEmbeddings(documents)

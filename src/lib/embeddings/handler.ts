@@ -9,6 +9,7 @@ export interface ScrapedDocument {
 interface Block {
   type: 'heading' | 'code' | 'list' | 'text'
   content: string
+  chunks?: string[]
   metadata?: {
     language?: string
   }
@@ -43,34 +44,89 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export async function createEmbeddings(documents: ScrapedDocument[]): Promise<DocumentChunk[]> {
-  const chunks: DocumentChunk[] = []
-
-  for (const doc of documents) {
-    const formattedContent = formatBlockContent(doc)
+function chunkContent(content: string, maxLength: number = 1000): string[] {
+  const chunks: string[] = []
+  const sentences = content.split(/[.!?]+/)
+  
+  let currentChunk = ''
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim()
+    if (!trimmed) continue
     
-    // Create embeddings for each block
-    for (const content of formattedContent) {
-      const embeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: content,
-      })
+    if (currentChunk.length + trimmed.length > maxLength) {
+      if (currentChunk) chunks.push(currentChunk.trim())
+      currentChunk = trimmed
+    } else {
+      currentChunk += (currentChunk ? '. ' : '') + trimmed
+    }
+  }
+  
+  if (currentChunk) chunks.push(currentChunk.trim())
+  return chunks
+}
 
-      chunks.push({
-        content,
-        embedding: embeddingResponse.data[0].embedding,
-        metadata: {
-          title: doc.title,
-          url: doc.url,
-          type: content.startsWith('#') ? 'heading' : 
-                content.startsWith('```') ? 'code' : 
-                content.startsWith('•') ? 'list' : 'text'
+export async function createEmbeddings(documents: ScrapedDocument[]): Promise<DocumentChunk[]> {
+  const embeddings: any[] = []
+  
+  for (const doc of documents) {
+    for (const block of doc.content) {
+      try {
+        if (block.type === 'code') {
+          // Handle code blocks as before
+          const embeddingResponse = await openai.embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: block.content.slice(0, 8000) // Safeguard against long code blocks
+          })
+          embeddings.push({
+            embedding: embeddingResponse.data[0].embedding,
+            metadata: {
+              title: doc.title,
+              url: doc.url,
+              type: block.type,
+              ...block.metadata
+            }
+          })
+        } else if (block.chunks) {
+          for (const chunk of block.chunks) {
+            const embeddingResponse = await openai.embeddings.create({
+              model: 'text-embedding-ada-002',
+              input: chunk
+            })
+            embeddings.push({
+              embedding: embeddingResponse.data[0].embedding,
+              metadata: {
+                title: doc.title,
+                url: doc.url,
+                type: block.type,
+                chunk: chunk,
+                ...block.metadata
+              }
+            })
+          }
+        } else {
+          // Handle other blocks normally
+          const embeddingResponse = await openai.embeddings.create({
+            model: 'text-embedding-ada-002',
+            input: block.content
+          })
+          embeddings.push({
+            embedding: embeddingResponse.data[0].embedding,
+            metadata: {
+              title: doc.title,
+              url: doc.url,
+              type: block.type,
+              ...block.metadata
+            }
+          })
         }
-      })
+      } catch (error) {
+        console.error('Error creating embedding:', error)
+        // Continue with other blocks
+      }
     }
   }
 
-  return chunks
+  return embeddings
 }
 
 export async function findRelevantChunks(question: string, chunks: DocumentChunk[], topK: number = 5): Promise<DocumentChunk[]> {

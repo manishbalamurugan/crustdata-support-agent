@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from './ChatMessage';
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
@@ -23,6 +23,7 @@ export const Chat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -32,10 +33,37 @@ export const Chat: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
+  }, [input]);
+
+  // Format message if it looks like code
+  const formatMessage = (text: string) => {
+    // Check if the text looks like JSON
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      try {
+        JSON.parse(text);
+        return '\`\`\`json\n' + text + '\n\`\`\`';
+      } catch (e) {}
+    }
+    
+    // Check if it looks like a URL or API endpoint
+    if (text.includes('http') || text.includes('/api/')) {
+      return '\`\`\`\n' + text + '\n\`\`\`';
+    }
+    
+    return text;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = input.trim();
+    const userMessage = formatMessage(input.trim());
     setInput('');
     setIsLoading(true);
     
@@ -110,18 +138,25 @@ export const Chat: React.FC = () => {
           }}
           className="flex gap-2"
         >
-          <Input
+          <Textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder="Ask about Crustdata API..."
-            className="flex-1 input-glass text-slate-600 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="flex-1 input-glass text-slate-600 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[44px] max-h-[200px] resize-none"
             disabled={isLoading}
           />
           <Button 
             type="submit"
             size="icon"
             disabled={isLoading}
-            className="btn-gradient"
+            className="btn-gradient self-end h-11 w-11"
           >
             <Send className="h-4 w-4" />
           </Button>
